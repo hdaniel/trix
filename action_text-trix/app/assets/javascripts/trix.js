@@ -3122,6 +3122,11 @@ $\
       this.sanitizeElements();
       this.normalizeListElementNesting();
       const purifyConfig = Object.assign({}, dompurify, this.purifyOptions);
+      // Note: DOMPurify strips <iframe> by default. Some distributions (e.g.,
+      // Action Text’s packaged build) set ADD_TAGS: ["iframe"] in the DOMPurify
+      // config to preserve trusted embeds like video players. This is optional and
+      // should only be enabled if you are certain the iframe sources are trusted.
+      // See action_text-trix/app/assets/javascripts/trix.js for an example.
       purify.setConfig(purifyConfig);
       this.body = purify.sanitize(this.body);
       return this.body;
@@ -3157,19 +3162,15 @@ $\
       return this.body;
     }
     sanitizeElement(element) {
+      // Keep minimal protocol safety for href; DOMPurify also handles this.
       if (element.hasAttribute("href")) {
         if (this.forbiddenProtocols.includes(element.protocol)) {
           element.removeAttribute("href");
         }
       }
-      Array.from(element.attributes).forEach(_ref => {
-        let {
-          name
-        } = _ref;
-        if (!this.allowedAttributes.includes(name) && name.indexOf("data-trix") !== 0) {
-          element.removeAttribute(name);
-        }
-      });
+
+      // Do not remove attributes here. Let DOMPurify handle attribute allow/deny,
+      // while a DOMPurify hook above preserves data-trix-* attributes.
       return element;
     }
     normalizeListElementNesting() {
@@ -3185,10 +3186,9 @@ $\
     }
     elementIsRemovable(element) {
       if ((element === null || element === void 0 ? void 0 : element.nodeType) !== Node.ELEMENT_NODE) return;
-      return this.elementIsForbidden(element) || this.elementIsntSerializable(element);
-    }
-    elementIsForbidden(element) {
-      return this.forbiddenElements.includes(tagName(element));
+      // Only remove elements that should not be serialized by Trix;
+      // leave tag allow/deny decisions to DOMPurify.
+      return this.elementIsntSerializable(element);
     }
     elementIsntSerializable(element) {
       return element.getAttribute("data-trix-serialize") === "false" && !nodeIsAttachmentElement(element);

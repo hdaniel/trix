@@ -27,6 +27,19 @@ testGroup("HTMLSanitizer", () => {
       assert.equal(document, expectedHTML)
     })
   })
+
+  test("keeps data-trix-* attributes even when not allowlisted", () => {
+    const dompurifyConfig = {
+      ALLOWED_ATTR: [],
+      RETURN_DOM: true,
+    }
+    withDOMPurifyConfig(dompurifyConfig, () => {
+      const html = "<div data-trix-foo=\"bar\" data-foo=\"baz\" class=\"x\"></div>"
+      const expectedHTML = "<div data-trix-foo=\"bar\"></div>"
+      const document = HTMLSanitizer.sanitize(html).body.innerHTML
+      assert.equal(document, expectedHTML)
+    })
+  })
 })
 
 const withDOMPurifyConfig = (attrConfig = {}, fn) => {
