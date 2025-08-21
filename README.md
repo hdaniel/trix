@@ -214,7 +214,7 @@ addEventListener("trix-change", (event) => {
   } else {
     editorElement.setCustomValidity("The document is not valid.")
   }
-}
+})
 ```
 
 [Constraint validation]: https://developer.mozilla.org/en-US/docs/Web/HTML/Constraint_validation
@@ -556,6 +556,13 @@ For example if you want to keep a custom tag, you can access do that with:
 
 ```js
 Trix.config.dompurify.ADD_TAGS = [ "my-custom-tag" ]
+```
+
+If you need to support trusted embeds like videos that render inside an <iframe>, you may allowlist it:
+
+```js
+// Only do this if you trust the iframe sources
+Trix.config.dompurify.ADD_TAGS = [ "iframe" ]
 ```
 
 ## Observing Editor Changes

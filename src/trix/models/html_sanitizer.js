@@ -41,6 +41,11 @@ export default class HTMLSanitizer extends BasicObject {
     this.sanitizeElements()
     this.normalizeListElementNesting()
     const purifyConfig = Object.assign({}, config.dompurify, this.purifyOptions)
+    // Note: DOMPurify strips <iframe> by default. Some distributions (e.g.,
+    // Action Text’s packaged build) set ADD_TAGS: ["iframe"] in the DOMPurify
+    // config to preserve trusted embeds like video players. This is optional and
+    // should only be enabled if you are certain the iframe sources are trusted.
+    // See action_text-trix/app/assets/javascripts/trix.js for an example.
     DOMPurify.setConfig(purifyConfig)
     this.body = DOMPurify.sanitize(this.body)
 
@@ -83,18 +88,15 @@ export default class HTMLSanitizer extends BasicObject {
   }
 
   sanitizeElement(element) {
+    // Keep minimal protocol safety for href; DOMPurify also handles this.
     if (element.hasAttribute("href")) {
       if (this.forbiddenProtocols.includes(element.protocol)) {
         element.removeAttribute("href")
       }
     }
 
-    Array.from(element.attributes).forEach(({ name }) => {
-      if (!this.allowedAttributes.includes(name) && name.indexOf("data-trix") !== 0) {
-        element.removeAttribute(name)
-      }
-    })
-
+    // Do not remove attributes here. Let DOMPurify handle attribute allow/deny,
+    // while a DOMPurify hook above preserves data-trix-* attributes.
     return element
   }
 
@@ -113,11 +115,9 @@ export default class HTMLSanitizer extends BasicObject {
 
   elementIsRemovable(element) {
     if (element?.nodeType !== Node.ELEMENT_NODE) return
-    return this.elementIsForbidden(element) || this.elementIsntSerializable(element)
-  }
-
-  elementIsForbidden(element) {
-    return this.forbiddenElements.includes(tagName(element))
+    // Only remove elements that should not be serialized by Trix;
+    // leave tag allow/deny decisions to DOMPurify.
+    return this.elementIsntSerializable(element)
   }
 
   elementIsntSerializable(element) {
